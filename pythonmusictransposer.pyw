@@ -278,8 +278,8 @@ def place_notes(canvas, notes, staff_spacing, staff_y_offset):
         normalized_note = normalize_input(note)  # Normalize to handle flats and sharps
         is_flat = '♭' in normalized_note
         is_sharp = '#' in normalized_note
-        is_high = normalized_note.endswith('^')  # Check for high octave
-        is_low = normalized_note.endswith('v')    # Check for low octave
+        is_high = '^' in normalized_note  # Check for high octave
+        is_low = 'v' in normalized_note    # Check for low octave
         
         # Remove octave markers for note positioning
         base_note = normalized_note.rstrip('♭#^v')
@@ -331,12 +331,11 @@ def place_notes(canvas, notes, staff_spacing, staff_y_offset):
             canvas.create_oval(x_offset, y_position, x_offset + 15, y_position + 10, fill="black")
 
             # Draw the stem (quarter note line)
-            if note_positions[base_note] < 16 or is_high:  # Notes below the middle staff have upward stems
+            if note_positions[base_note] < 15 or (is_high and note_positions[base_note] < 20):  # Example for high notes
                 canvas.create_line(x_offset, y_position + 5, x_offset, y_position + stem_length + 10, fill="black", width=2)
-            else:  # Notes above the middle staff have downward stems
-                canvas.create_line(x_offset + 15, y_position + 5, x_offset + 15, y_position - stem_length, fill="black", width=2)
-
-
+            else:
+                canvas.create_line(x_offset + 15, y_position + 5, x_offset + 15, y_position - stem_length, fill="black", width=2)        
+                
             # Render the accidental symbol if applicable
             if is_flat:
                 canvas.create_text(x_offset - 5, y_position - 3, text='♭', font=('Arial', 14), fill='black')
