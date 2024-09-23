@@ -18,4 +18,4 @@ Example Input:
 
 If I'm not mistaken, the range of notes goes **from F3 to D6**.
 
-![Program image](https://github.com/foooooooooooooooooooooooooootw/Python-Music-Transposer/blob/main/transposer.png?raw=true)
+![Program image](https://github.com/foooooooooooooooooooooooooootw/Python-Music-Transposer/blob/main/transposer.jpg?raw=true)
