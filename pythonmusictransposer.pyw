@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog, Canvas
-import time  # Import time module for Unix timestamp
+import time 
+import re
 
 # Transpose mapping and chromatic scale
 chromatic_scale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -16,11 +17,15 @@ instrument_transpose_map = {
 }
 
 def transpose(note, shift):
+    print(f"Transposing note: {note} with shift: {shift}")  # DEBUG: Log the input note and shift
+
     # Handle B# and E# enharmonics
     if note == 'B#':
-        note = 'C'
+        print(f"Enharmonic B# → C with octave {note[-1]}")  # DEBUG: Log enharmonic change
+        return 'C' + note[-1]  # Preserve the octave marker
     elif note == 'E#':
-        note = 'F'
+        print(f"Enharmonic E# → F with octave {note[-1]}")  # DEBUG: Log enharmonic change
+        return 'F' + note[-1]  # Preserve the octave marker
 
     # Extract the octave marker (^ for upper, v for lower)
     octave_marker = ''
@@ -31,32 +36,68 @@ def transpose(note, shift):
         octave_marker = 'v'
         note = note[:-1]  # Remove the octave marker for transposition
 
+    print(f"Note before normalization: {note}")  # DEBUG: Log the note before normalization
+
     # Normalize flats to sharps (e.g., B♭ → A#)
     normalized_note = flat_to_sharp_map.get(note, note)
+    print(f"Normalized Note: {normalized_note}")  # DEBUG: Log normalized note
+
+    # Transpose the base note without accidental
+    base_note = normalized_note.rstrip('#♭')  # Strip any accidentals
+    accidental = normalized_note[len(base_note):]  # Get the accidental part
+
+    print(f"Base Note: {base_note}, Accidental: {accidental}, Octave Marker: {octave_marker}")  # DEBUG: Log base note and accidental
+
+    if base_note not in chromatic_scale:
+        return note + octave_marker  # Return original note if not found
     
-    # Transpose the normalized note
-    index = chromatic_scale.index(normalized_note) if normalized_note in chromatic_scale else -1
-    if index == -1:
-        return note  # Return the original note if not found
-    
-    # Calculate the new index for the transposed note
+    index = chromatic_scale.index(base_note)
     new_index = (index + shift) % 12
-    transposed_note = chromatic_scale[new_index]
-    
-    # Return the transposed note with its original octave marker
+    transposed_base = chromatic_scale[new_index]
+
+    print(f"Transposed Base: {transposed_base}, Accidental: {accidental}")  # DEBUG: Log the transposed base note
+
+    # Remove the accidental if the transposed note moves to a natural
+    if accidental == '#' and transposed_base in ['C', 'F']:
+        accidental = ''  # Remove sharp when transposing to C or F
+    elif accidental == '♭' and transposed_base in ['B', 'E']:
+        accidental = ''  # Remove flat when transposing to B or E
+
+    transposed_note = transposed_base + accidental
+    print(f"Final Transposed Note: {transposed_note}{octave_marker}")  # DEBUG: Log final transposed note
+
+    # Return the final transposed note with the octave marker
     return transposed_note + octave_marker
 
+
 def normalize_input(note):
+    # Regular expression to capture the base note, optional accidental, and optional octave marker in any order
+    match = re.match(r"([A-Ga-g])([#♭b]?)([v^]?)", note)
+
+    if not match:
+        print(f"Note doesn't match normalization pattern: {note}")  # DEBUG: Log if note does not match
+        return note.upper()  # If it doesn't match, return the note as uppercase
+
+    base_note, accidental, octave_marker = match.groups()
+
+    print(f"Before normalization - Base Note: {base_note}, Accidental: {accidental}, Octave Marker: {octave_marker}")  # DEBUG
+
+    # Special case for when accidental appears after the octave marker, e.g., "A^#"
+    if not accidental and note.endswith('#'):
+        accidental = '#'
+    elif not accidental and note.endswith('b'):
+        accidental = '♭'
+
     # Convert lowercase 'b' to '♭'
-    note = note.replace('b', '♭')
-    
-    # Preserve the octave marker
-    if note.endswith('^') or note.endswith('v'):
-        octave_marker = note[-1]
-        base_note = note[:-1].upper()  # Normalize to uppercase
-        return base_note + octave_marker
-    else:
-        return note.upper()  # Normalize to uppercase
+    accidental = accidental.replace('b', '♭')
+
+    # Rebuild the normalized note as: BaseNote + Accidental + OctaveMarker
+    normalized_note = base_note.upper() + accidental + octave_marker
+
+    print(f"Normalized Note: {normalized_note}")  # DEBUG
+
+    return normalized_note
+
 
 def transpose_notes():
     # Get the input from the text field and instrument selection
@@ -66,6 +107,7 @@ def transpose_notes():
     
     # Normalize the input
     normalized_input = [normalize_input(note) for note in notes_input]
+    print("Normalized Input:", normalized_input)  # DEBUG: Log normalized input
 
     # Define the valid notes including octave markers
     valid_notes = chromatic_scale + list(flat_to_sharp_map.keys())
@@ -73,23 +115,35 @@ def transpose_notes():
 
     # Add sharps and flats to valid notes
     valid_notes_with_octaves += [note + '#' for note in valid_notes] + [note + '♭' for note in valid_notes]
-
+    
+    # DEBUG: Log the valid notes with octaves
+    print("Valid Notes with Octaves:", valid_notes_with_octaves)
+    
     # Check for invalid notes
     invalid_notes = [note for note in normalized_input if note not in valid_notes_with_octaves]
     if invalid_notes:
         messagebox.showerror("Invalid Notes", f"Invalid notes entered: {', '.join(invalid_notes)}.")
+        print("Invalid Notes Detected:", invalid_notes)  # DEBUG: Log invalid notes
         return
 
     # Determine the shift based on concert pitch toggle
     shift = -transpose_value if concert_var.get() else transpose_value
 
+    # DEBUG: Log the transpose shift value
+    print("Transpose Shift:", shift)
+
     # Transpose the notes and update the output text
     transposed_notes = [transpose(note, shift) for note in normalized_input]
+    print("Transposed Notes:", transposed_notes)  # DEBUG: Log transposed notes
+
+    # Replace B# with C and E# with F in the output
+    final_notes = [note.replace('B#', 'C').replace('E#', 'F') for note in transposed_notes]
+    print("Final Transposed Notes (with enharmonic fixes):", final_notes)  # DEBUG
 
     # Set the output text box and disable editing
     output_entry.config(state='normal')  # Enable editing to set text
     output_entry.delete("1.0", tk.END)  # Clear previous output
-    output_entry.insert("1.0", ' '.join(transposed_notes))  # Insert new output
+    output_entry.insert("1.0", ' '.join(final_notes))  # Insert new output
     output_entry.config(state='disabled')  # Disable editing again
     
     # Update instrument labels
@@ -169,7 +223,6 @@ def draw_staff_and_notes():
     # Place notes for input and transposed output
     place_notes(input_canvas, input_notes, staff_spacing, staff_y_offset)
     place_notes(output_canvas, transposed_notes, staff_spacing, staff_y_offset)  # Make sure this is for the transposed notes
-
 
 def calculate_staff_offset(notes):
     # Determine the minimum and maximum note positions in the input
@@ -259,28 +312,27 @@ def place_notes(canvas, notes, staff_spacing, staff_y_offset):
             
             # Draw the note as a black oval
             canvas.create_oval(x_offset, y_position, x_offset + 15, y_position + 10, fill="black")
+
             # Draw the stem (quarter note line)
-            if note_positions[base_note] <= 20:  # Notes below the middle staff have upward stems
-                canvas.create_line(x_offset + 15, y_position + 5, x_offset + 15, y_position - stem_length, fill="black", width=2)
-            else:  # Notes above the middle staff have downward stems
+            if note_positions[base_note] < 16:  # Notes below the middle staff have upward stems
                 canvas.create_line(x_offset, y_position + 5, x_offset, y_position + stem_length + 10, fill="black", width=2)
+            else:  # Notes above the middle staff have downward stems
+                canvas.create_line(x_offset + 15, y_position + 5, x_offset + 15, y_position - stem_length, fill="black", width=2)
 
 
             # Render the accidental symbol if applicable
             if is_flat:
-                canvas.create_text(x_offset - 10, y_position, text='♭', font=('Arial', 14), fill='black')
+                canvas.create_text(x_offset - 5, y_position - 3, text='♭', font=('Arial', 14), fill='black')
             elif is_sharp:
-                canvas.create_text(x_offset - 10, y_position, text='♯', font=('Arial', 14), fill='black')
+                canvas.create_text(x_offset - 5, y_position - 3, text='♯', font=('Arial', 14), fill='black')
 
             # Move the x position for the next note
             x_offset += 30  # Space between notes
             
             # Wrap to the next staff if the x_offset exceeds the staff width
-            if x_offset > staff_width:
+            if x_offset > staff_width -20:
                 x_offset = 50  # Reset x position for new staff
                 current_staff += 1  # Move to the next staff
-
-
 
 # Tkinter GUI setup
 root = tk.Tk()
