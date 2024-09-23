@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, filedialog, Canvas
+from tkinter import messagebox, filedialog, Canvas, Scrollbar
 import time 
 import re
 
@@ -192,6 +192,14 @@ def draw_staff(canvas, staff_y_offset, staff_spacing):
             y_position = staff_y_offset + i * line_height + staff * staff_spacing
             canvas.create_line(10, y_position, 290, y_position, fill="black")
 
+        # Draw the treble clef on the leftmost side of each stave
+        clef_x = 25  # X position for the clef symbol
+        clef_y = staff_y_offset + staff * staff_spacing + 12  # Y position (centered vertically on the staff)
+        
+        # You can experiment with the font size for best appearance
+        canvas.create_text(clef_x, clef_y, text='𝄞', font=('Segoe UI Symbol', 50), fill='black')
+
+
 # Define note_positions globally, so all functions can access it
 # Note positions for rendering
 note_positions = {
@@ -204,25 +212,34 @@ def draw_staff_and_notes():
     input_notes = notes_entry.get("1.0", tk.END).strip().split()
     transposed_notes = output_entry.get("1.0", tk.END).strip().split()
 
-    # Find the maximum offset needed to accommodate high or low notes
     extra_padding = 30
     staff_y_offset = max(calculate_staff_offset(input_notes), calculate_staff_offset(transposed_notes))
     staff_y_offset += extra_padding
-    
+
+    # Calculate how many staves are required based on the number of notes
+    notes_per_staff = 8  # You can adjust this based on how many notes fit on each staff
+    total_notes = max(len(input_notes), len(transposed_notes))
+    required_staves = (total_notes // notes_per_staff) + 1
+
+    # Adjust canvas height dynamically, but ensure a minimum size
+    staff_spacing = 100  # Distance between staves
+    canvas_height = max(440, required_staves * staff_spacing)  # Ensure a minimum canvas height of 440 pixels
+    input_canvas.config(height=canvas_height)
+    output_canvas.config(height=canvas_height)
+
     # Clear the canvases before redrawing
     input_canvas.delete("all")
     output_canvas.delete("all")
 
-    # Define the spacing for staves
-    staff_spacing = 100  # Distance between staves
-
     # Draw staves and place notes
-    draw_staff(input_canvas, staff_y_offset, staff_spacing)
-    draw_staff(output_canvas, staff_y_offset, staff_spacing)
-    
+    for staff in range(required_staves):
+        draw_staff(input_canvas, staff_y_offset, staff_spacing)
+        draw_staff(output_canvas, staff_y_offset, staff_spacing)
+
     # Place notes for input and transposed output
     place_notes(input_canvas, input_notes, staff_spacing, staff_y_offset)
-    place_notes(output_canvas, transposed_notes, staff_spacing, staff_y_offset)  # Make sure this is for the transposed notes
+    place_notes(output_canvas, transposed_notes, staff_spacing, staff_y_offset)
+
 
 def calculate_staff_offset(notes):
     # Determine the minimum and maximum note positions in the input
@@ -340,17 +357,51 @@ root.title("Python Music Transposer")
 
 # Frame for input and output
 frame = tk.Frame(root)
-frame.pack(padx=10, pady=10)
+frame.pack(padx=10, pady=10, fill='both', expand=True)
 
 # Input for notes
 tk.Label(frame, text="Enter Notes (C, D, E, F, G, A, B, ♭, #):").grid(row=0, column=0, sticky='w')
-notes_entry = tk.Text(frame, width=30, height=20, font=('Arial', 14))  # Adjust height
-notes_entry.grid(row=1, column=0, padx=5, pady=5)
+
+# Create a frame for notes input and its scrollbar
+notes_frame = tk.Frame(frame)
+notes_frame.grid(row=1, column=0, padx=5, pady=5, sticky='nsew')
+
+# Scrollbar for the input text box
+notes_scrollbar = tk.Scrollbar(notes_frame)
+notes_scrollbar.grid(row=0, column=1, sticky='ns')
+
+# Create the input text box with the scrollbar
+notes_entry = tk.Text(notes_frame, width=30, height=20, font=('Arial', 14), yscrollcommand=notes_scrollbar.set)
+notes_entry.grid(row=0, column=0, sticky='nsew')
+
+# Configure the frame for resizing
+notes_frame.grid_rowconfigure(0, weight=1)
+notes_frame.grid_columnconfigure(0, weight=1)
+
+# Link scrollbar to text box
+notes_scrollbar.config(command=notes_entry.yview)
 
 # Output for transposed notes
 tk.Label(frame, text="Transposed Notes:").grid(row=0, column=1, sticky='w')
-output_entry = tk.Text(frame, width=30, height=20, fg="blue", font=('Arial', 14), state='disabled')  # Start disabled
-output_entry.grid(row=1, column=1, padx=5, pady=5)
+
+# Create a frame for transposed notes output and its scrollbar
+output_frame = tk.Frame(frame)
+output_frame.grid(row=1, column=1, padx=5, pady=5, sticky='nsew')
+
+# Scrollbar for the output text box
+output_scrollbar = tk.Scrollbar(output_frame, orient=tk.VERTICAL)
+output_scrollbar.grid(row=0, column=1, sticky='ns')
+
+# Create the output text box with the scrollbar
+output_entry = tk.Text(output_frame, width=30, height=20, fg="blue", font=('Arial', 14), state='disabled', yscrollcommand=output_scrollbar.set)
+output_entry.grid(row=0, column=0, sticky='nsew')
+
+# Configure grid for resizing
+output_frame.grid_rowconfigure(0, weight=1)
+output_frame.grid_columnconfigure(0, weight=1)
+
+# Link scrollbar to text box
+output_scrollbar.config(command=output_entry.yview)
 
 # Labels for displaying instrument names
 input_label_var = tk.StringVar(value="C")
@@ -361,10 +412,11 @@ tk.Label(frame, textvariable=output_label_var).grid(row=2, column=1)  # Output i
 # Instrument selection for transpose
 tk.Label(root, text="Select Instrument:").pack(pady=(10, 0))
 instrument_var = tk.StringVar(value='B♭')  # Default to B♭
-tk.OptionMenu(root, instrument_var, *instrument_transpose_map.keys(), command=lambda _: update_instrument_labels()).pack(pady=5)
+instrument_transpose_map = {'B♭': 2, 'E♭': -3, 'F': 7}  # Dummy instrument transpositions
+tk.OptionMenu(root, instrument_var, *instrument_transpose_map.keys()).pack(pady=5)
 
 concert_var = tk.BooleanVar()
-concert_checkbox = tk.Checkbutton(root, text="Convert To/From Concert Pitch", variable=concert_var, command=update_instrument_labels)
+concert_checkbox = tk.Checkbutton(root, text="Convert To/From Concert Pitch", variable=concert_var)
 concert_checkbox.pack(pady=5)
 
 # Checkbox for staff overlay
@@ -373,26 +425,64 @@ staff_overlay_checkbox = tk.Checkbutton(root, text="Show Staff Overlay", variabl
 staff_overlay_checkbox.pack(pady=5)
 
 # Create canvases for drawing the staff
-input_canvas = Canvas(frame, width=330, height=440, bg="white")
-input_canvas.grid(row=1, column=0, padx=5, pady=5)
-input_canvas.grid_remove()  # Hide the input canvas initially
+input_canvas_frame = tk.Frame(frame)
+input_canvas_frame.grid(row=1, column=0, padx=5, pady=5)
 
-output_canvas = Canvas(frame, width=330, height=440, bg="white")
-output_canvas.grid(row=1, column=1, padx=5, pady=5)
-output_canvas.grid_remove()  # Hide the output canvas initially
+input_canvas = Canvas(input_canvas_frame, width=330, height=440, bg="white")
+input_canvas.grid(row=0, column=0, sticky='nsew')
 
+input_scrollbar = tk.Scrollbar(input_canvas_frame, orient="vertical", command=input_canvas.yview)
+input_scrollbar.grid(row=0, column=1, sticky='ns')
+
+input_canvas.config(yscrollcommand=input_scrollbar.set)
+
+# Configure grid to allow resizing
+input_canvas_frame.grid_rowconfigure(0, weight=1)
+input_canvas_frame.grid_columnconfigure(0, weight=1)
+
+output_canvas_frame = tk.Frame(frame)
+output_canvas_frame.grid(row=1, column=1, padx=5, pady=5)
+
+output_canvas = Canvas(output_canvas_frame, width=330, height=440, bg="white")
+output_canvas.grid(row=0, column=0, sticky='nsew')
+
+output_canvas_scrollbar = tk.Scrollbar(output_canvas_frame, orient="vertical", command=output_canvas.yview)
+output_canvas_scrollbar.grid(row=0, column=1, sticky='ns')
+
+output_canvas.config(yscrollcommand=output_canvas_scrollbar.set)
+
+# Configure grid to allow resizing
+output_canvas_frame.grid_rowconfigure(0, weight=1)
+output_canvas_frame.grid_columnconfigure(0, weight=1)
+
+# Show the text boxes and hide the canvases
+notes_frame.grid(row=1, column=0, padx=5, pady=5)  # Show the notes entry frame
+output_frame.grid(row=1, column=1, padx=5, pady=5)  # Show the output entry
+        
+# Hide the canvases
+input_canvas_frame.grid_remove()
+output_canvas_frame.grid_remove()
+
+# Toggle staff overlay visibility
 def toggle_staff_overlay():
     if staff_overlay_var.get():
-        notes_entry.grid_remove()  # Hide the notes entry
-        output_entry.grid_remove()  # Hide the output entry
-        input_canvas.grid(row=1, column=0, padx=5, pady=5)  # Show the input canvas
-        output_canvas.grid(row=1, column=1, padx=5, pady=5)  # Show the output canvas
-        draw_staff_and_notes()  # Draw staff and notes
+        # Hide the text boxes and show the canvases
+        notes_frame.grid_remove()  # Hide the notes entry frame
+        output_frame.grid_remove()  # Hide the output entry
+        
+        # Show the input and output canvases
+        input_canvas_frame.grid(row=1, column=0, padx=5, pady=5)
+        output_canvas_frame.grid(row=1, column=1, padx=5, pady=5)
+        draw_staff_and_notes()
+
     else:
-        notes_entry.grid(row=1, column=0, padx=5, pady=5)  # Show the notes entry
-        output_entry.grid(row=1, column=1, padx=5, pady=5)  # Show the output entry
-        input_canvas.grid_remove()  # Hide the input canvas
-        output_canvas.grid_remove()  # Hide the output canvas
+        # Show the text boxes and hide the canvases
+        notes_frame.grid(row=1, column=0, padx=5, pady=5)  # Show the notes entry frame
+        output_frame.grid(row=1, column=1, padx=5, pady=5)  # Show the output entry
+        
+        # Hide the canvases
+        input_canvas_frame.grid_remove()
+        output_canvas_frame.grid_remove()
 
 # Buttons
 tk.Button(root, text="Transpose", command=transpose_notes).pack(pady=5)
