@@ -331,7 +331,7 @@ def place_notes(canvas, notes, staff_spacing, staff_y_offset):
             canvas.create_oval(x_offset, y_position, x_offset + 15, y_position + 10, fill="black")
 
             # Draw the stem (quarter note line)
-            if note_positions[base_note] < 16:  # Notes below the middle staff have upward stems
+            if note_positions[base_note] < 16 or is_high:  # Notes below the middle staff have upward stems
                 canvas.create_line(x_offset, y_position + 5, x_offset, y_position + stem_length + 10, fill="black", width=2)
             else:  # Notes above the middle staff have downward stems
                 canvas.create_line(x_offset + 15, y_position + 5, x_offset + 15, y_position - stem_length, fill="black", width=2)
@@ -416,7 +416,7 @@ instrument_transpose_map = {'B♭': 2, 'E♭': -3, 'F': 7}  # Dummy instrument t
 tk.OptionMenu(root, instrument_var, *instrument_transpose_map.keys()).pack(pady=5)
 
 concert_var = tk.BooleanVar()
-concert_checkbox = tk.Checkbutton(root, text="Convert To/From Concert Pitch", variable=concert_var)
+concert_checkbox = tk.Checkbutton(root, text="Convert To/From Concert Pitch", variable=concert_var, command=lambda: update_instrument_labels())
 concert_checkbox.pack(pady=5)
 
 # Checkbox for staff overlay
