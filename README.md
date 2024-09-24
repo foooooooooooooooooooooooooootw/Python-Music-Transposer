@@ -1,3 +1,7 @@
+<p align="center">
+  <img width="200" height="200" src="https://github.com/foooooooooooooooooooooooooootw/Python-Music-Transposer/blob/main/PMT.ico?raw=true">
+</p>
+
 # Python Music Transposer
 A simple music transposer that lets you transpose notes between concert C, B♭, E♭ and F instruments. 
 
