@@ -366,25 +366,49 @@ def toggle_staff_overlay():
 def draw_staff(canvas, staff_y_offset, staff_spacing):
     lines = 5
     line_height = 10
+    note_spacing = 30
+
     for staff in range(2):  # Draw multiple staves as needed
         for i in range(lines):
             y_position = staff_y_offset + i * line_height + staff * staff_spacing
             canvas.create_line(10, y_position, 290, y_position, fill="black")
+
         # Treble clef
         canvas.create_text(25, staff_y_offset + staff * staff_spacing + 12, text='𝄞', font=('Segoe UI Symbol', 50), fill='black')
+        
+        for note_index in range(1, 3):  # Start at 1 to avoid the first measure
+            line_x = 48 + (note_spacing * 4 * note_index)  # Calculate x position for the measure line
+
+            # Draw the measure line only within the staff's vertical space
+            canvas.create_line(line_x, y_position, line_x, y_position - 40, fill="black", width=2)  # Set width to 3 for a thick line
 
 def draw_staff_and_notes():
     input_notes = notes_entry.get("1.0", tk.END).strip().split()
     transposed_notes = output_entry.get("1.0", tk.END).strip().split()
     extra_padding = 30
-    staff_y_offset = max(calculate_staff_offset(input_notes), calculate_staff_offset(transposed_notes)) + extra_padding
     staff_spacing = 100
+    max_notes_per_staff = 8  # Define how many notes can fit in one staff
+
+    # Calculate how many staves are needed based on the number of notes
+    total_notes = len(input_notes) + len(transposed_notes)
+    num_staves = (total_notes // max_notes_per_staff) + 1  # Add one more for any remaining notes
+
+    staff_y_offset = max(calculate_staff_offset(input_notes), calculate_staff_offset(transposed_notes)) + extra_padding
     input_canvas.delete("all")
     output_canvas.delete("all")
-    draw_staff(input_canvas, staff_y_offset, staff_spacing)
-    draw_staff(output_canvas, staff_y_offset, staff_spacing)
+    
+    # Draw the required number of staves
+    for staff in range(num_staves):
+        draw_staff(input_canvas, staff_y_offset + staff * staff_spacing, staff_spacing)
+        draw_staff(output_canvas, staff_y_offset + staff * staff_spacing, staff_spacing)
+
     place_notes(input_canvas, input_notes, staff_spacing, staff_y_offset)
     place_notes(output_canvas, transposed_notes, staff_spacing, staff_y_offset)
+
+    # Update the scroll region to encompass the drawn content
+    total_height = staff_y_offset + num_staves * staff_spacing
+    input_canvas.config(scrollregion=(0, 0, 330, total_height))
+    output_canvas.config(scrollregion=(0, 0, 330, total_height))
 
 def calculate_staff_offset(notes):
     return 30  # Basic offset for positioning
@@ -439,9 +463,9 @@ def place_notes(canvas, notes, staff_spacing, staff_y_offset):
 
             # Render the accidental symbol if applicable
             if '♭' in normalized_note or 'b' in normalized_note:  # Handle flats
-                canvas.create_text(x_offset - 5, y_position - 3, text='♭', font=('Arial', 14), fill='black')
+                canvas.create_text(x_offset - 5, y_position - 3, text='♭', font=('Arial', 14), fill='#0000FF')
             elif '♯' in normalized_note or '#' in normalized_note:  # Handle sharps
-                canvas.create_text(x_offset - 5, y_position - 3, text='♯', font=('Arial', 14), fill='black')
+                canvas.create_text(x_offset - 5, y_position - 3, text='♯', font=('Arial', 14), fill='#0000FF')
 
             # Debugging output for note and octave
             base_note = normalized_note[:-1]  # Base note (e.g., 'B')
@@ -487,6 +511,28 @@ def place_notes(canvas, notes, staff_spacing, staff_y_offset):
         else:
             canvas.create_text(x_offset, 50, text="x", font=('Arial', 16), fill="red")
             x_offset += 30  # Space between notes
+
+def copy_to_clipboard(event=None):
+    # Copy the selected text to the clipboard
+    notes_entry.clipboard_clear()
+    try:
+        notes_entry.clipboard_append(notes_entry.get("sel.first", "sel.last"))
+    except tk.TclError:
+        pass  # Handle the case where no text is selected
+
+def show_context_menu(event):
+    # Display the context menu at the mouse pointer position
+    context_menu.post(event.x_root, event.y_root)
+
+# Create the context menu
+context_menu = tk.Menu(notes_frame, tearoff=0)
+context_menu.add_command(label="Copy", command=copy_to_clipboard)
+
+# Bind right-click event to show the context menu
+notes_entry.bind("<Button-3>", show_context_menu)
+
+# Allow copying with Ctrl+C
+notes_entry.bind("<Control-c>", copy_to_clipboard)
 
 # Buttons
 tk.Button(root, text="Transpose", command=display_transposed_notes).pack(pady=5)
