@@ -15,11 +15,11 @@ The default is that the **input is assumed to be concert C**, and whatever you p
 <br></br>
 Example Input:
 <ul>
-<li>"A#^" is a high A sharp. You can also type it as "A^#".</li>
+<li>"A#^" is a high A sharp. You can also type it as "A^#" or .</li>
 <li>"Bbv" is a low B flat. You can also type it as "Bvb". </li>
 </ul>
 <br></br>
 
-If I'm not mistaken, the range of notes goes **from F3 to D6**.
+If I'm not mistaken, the range of notes goes **from F3 to E6**.
 
 ![Program image](https://github.com/foooooooooooooooooooooooooootw/Python-Music-Transposer/blob/main/transposer.png?raw=true)
