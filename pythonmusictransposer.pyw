@@ -18,7 +18,29 @@ instrument_transpose_map = {
 
 def normalize_input(note):
     """Normalize both scientific and caret notation correctly."""
-    
+
+    # If caret notation is present, handle it first
+    caret_match = re.match(r'([A-G][#b♭]*)([v^]*)', note)
+    if caret_match:
+
+        base_note = caret_match.group(1)  # e.g., A, B#, C♭
+        octave_modifiers = caret_match.group(2)  # e.g., ^^ or vv
+
+        if 'b' in base_note:
+            base_note = base_note.replace('b', '♭')  # Normalize flats
+
+        # Debugging output to check parsed values
+        print(f"Debug: Parsed Note - Base: {base_note}, Modifiers: {octave_modifiers}")
+
+        # Determine the octave based on base note and caret modifiers
+        octave = 4 if base_note[:-1] in ['A', 'B', 'G', 'F'] else 5
+        print(base_note[:-1])
+        
+        # Adjust the octave based on caret modifiers
+        octave += octave_modifiers.count('^') - octave_modifiers.count('v')
+
+        return f"{base_note}{octave}"
+
     # Check for scientific notation (e.g., B5, C#5, G♭)
     scientific_match = re.match(r'([A-G][#b♭]?)(\d*)', note)
     if scientific_match:
@@ -30,26 +52,14 @@ def normalize_input(note):
             octave = '4'
 
         # Handle flats and sharps correctly
-        if '♭' in base_note or 'b' in base_note:
+        if 'b' in base_note:
             base_note = base_note.replace('b', '♭')  # Normalize flats
 
         return f"{base_note}{octave}"  # Return in the format BaseNoteOctave (e.g., G♭4)
 
-    # If not in scientific notation, handle caret notation
-    parsed_note = re.match(r'([A-G][#♭]*)([v^]*)', note)
-    if parsed_note:
-        base_note = parsed_note.group(1)  # e.g., A, B#, C♭
-        octave_modifiers = parsed_note.group(2)  # e.g., ^^ or vv
-        
-        # Assume base octave of 4 and adjust based on caret modifiers
-        if base_note in ['A', 'B', 'G', 'F']:
-            octave = 4 + octave_modifiers.count('^') - octave_modifiers.count('v')
-        else:
-            octave = 5 + octave_modifiers.count('^') - octave_modifiers.count('v')
-
-        return f"{base_note}{octave}"
-
     return note  # Return as is if no match
+
+
 
 def parse_input(input_str):
     """Parse input for both caret and scientific notation."""
