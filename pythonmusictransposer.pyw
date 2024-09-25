@@ -16,29 +16,35 @@ instrument_transpose_map = {
     'F': 7      # F Instrument
 }
 
+import re
+
 def normalize_input(note):
     """Normalize both scientific and caret notation correctly."""
     
-    # Check if the note is already in scientific notation (e.g., B5, C#5)
-    scientific_match = re.match(r'([A-G][#♭]?)(\d)', note)
+    # Check for scientific notation (e.g., B5, C#5, G♭)
+    scientific_match = re.match(r'([A-G][#b♭]?)(\d*)', note)
     if scientific_match:
-        base_note = scientific_match.group(1)  # Base note (e.g., 'B')
-        octave = scientific_match.group(2)      # Octave (e.g., '5')
+        base_note = scientific_match.group(1)  # Base note (e.g., 'B', 'G#', 'G♭')
+        octave = scientific_match.group(2)      # Octave (e.g., '5', empty if not present)
 
-        # Check for sharp after octave
-        if len(note) > len(base_note) + len(octave) and note[len(base_note) + len(octave)] == '#':
-            return f"{base_note}#{octave}"  # Format as B#5, etc.
+        # If there's no octave, assume octave 4
+        if octave == '':
+            octave = '4'
 
-        return f"{base_note}{octave}"  # Already in the correct format
+        # Handle flats and sharps correctly
+        if '♭' in base_note or 'b' in base_note:
+            base_note = base_note.replace('b', '♭')  # Normalize flats
 
-    # If not, handle caret notation
+        return f"{base_note}{octave}"  # Return in the format BaseNoteOctave (e.g., G♭4)
+
+    # If not in scientific notation, handle caret notation
     parsed_note = re.match(r'([A-G][#♭]*)([v^]*)', note)
     if parsed_note:
         base_note = parsed_note.group(1)  # e.g., A, B#, C♭
         octave_modifiers = parsed_note.group(2)  # e.g., ^^ or vv
         
         # Assume base octave of 4 and adjust based on caret modifiers
-        if "A" in base_note or "B" in base_note or "G" in base_note or "F" in base_note:
+        if base_note in ['A', 'B', 'G', 'F']:
             octave = 4 + octave_modifiers.count('^') - octave_modifiers.count('v')
         else:
             octave = 5 + octave_modifiers.count('^') - octave_modifiers.count('v')
@@ -117,7 +123,16 @@ def display_transposed_notes():
     shift = -transpose_value if concert_var.get() else transpose_value
     print(f"Shift Value: {shift}")  # Debugging output
 
-    transposed_notes = [transpose_note_with_octave(note, shift) for note in parsed_notes]
+    transposed_notes = []
+    invalid_notes = []  # List to store invalid notes
+
+    for note in parsed_notes:
+        try:
+            transposed_note = transpose_note_with_octave(note, shift)
+            transposed_notes.append(transposed_note)
+        except ValueError:
+            invalid_notes.append(note)  # Collect invalid notes
+
     print(f"Transposed Notes: {transposed_notes}")  # Debugging output
 
     caret_notation = caret_var.get()
@@ -128,8 +143,40 @@ def display_transposed_notes():
     output_entry.insert(tk.END, formatted)
     output_entry.config(state='disabled')
 
+    # Reset the input box background to white
+    notes_entry.config(bg='white')
+
+    # Highlight invalid notes in red
+    if invalid_notes:
+        highlight_invalid_notes(invalid_notes)
+
+        # Show a message box notifying the user
+        messagebox.showinfo("Invalid Notes", "There are invalid notes, check highlights.")
+
     if staff_overlay_var.get():
         draw_staff_and_notes()
+
+def highlight_invalid_notes(invalid_notes):
+    """Highlights the invalid notes in the input box."""
+    notes_input = notes_entry.get("1.0", tk.END)
+    start_index = 0  # Start from the beginning of the input box
+
+    # Reset any previous highlights
+    notes_entry.tag_remove("highlight", "1.0", "end")
+
+    # Iterate through invalid notes and highlight them
+    for note in invalid_notes:
+        note_index = notes_input.find(note, start_index)  # Find the note's position
+        while note_index != -1:  # While we find the note
+            start_pos = f"1.0 + {note_index} chars"
+            end_pos = f"1.0 + {note_index + len(note)} chars"
+            notes_entry.tag_add("highlight", start_pos, end_pos)  # Highlight the note
+            start_index = note_index + len(note)  # Move to the end of the found note
+            note_index = notes_input.find(note, start_index)  # Find next occurrence
+
+    # Configure the highlight tag
+    notes_entry.tag_config("highlight", background="#FF8C8A")  # Set highlight color
+
 
 # Add caret to scientific conversion function
 def scientific_to_caret(note):
