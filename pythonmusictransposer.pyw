@@ -16,11 +16,6 @@ instrument_transpose_map = {
     'F': 7      # F Instrument
 }
 
-import re
-
-
-import re
-
 def normalize_input(note):
     """Normalize both scientific and caret notation correctly."""
     
