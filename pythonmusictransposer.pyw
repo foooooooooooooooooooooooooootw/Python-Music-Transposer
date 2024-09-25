@@ -16,8 +16,6 @@ instrument_transpose_map = {
     'F': 7      # F Instrument
 }
 
-import re
-
 def normalize_input(note):
     """Normalize both scientific and caret notation correctly."""
     
@@ -438,30 +436,30 @@ def place_notes(canvas, notes, staff_spacing, staff_y_offset):
             
             if normalized_note == "A5":
                     draw_ledger_lines(canvas, y_position, x_offset)  # Line through the note
-            elif "A3" in normalized_note or "A#3" in normalized_note or "Ab3" in normalized_note:
+            elif "A3" in normalized_note or "A#3" in normalized_note or "A♭3" in normalized_note:
                     draw_ledger_lines(canvas, y_position, x_offset)
                     draw_ledger_lines(canvas, y_position - 10, x_offset)
-            elif normalized_note == 'B5':
+            elif 'B5' in normalized_note or "B#5" in normalized_note or "B♭5" in normalized_note:
                     draw_ledger_lines(canvas, y_position + 5, x_offset)
-            elif normalized_note == 'B3':
+            elif 'B3' in normalized_note or "B#3" in normalized_note or "B♭3" in normalized_note:
                     draw_ledger_lines(canvas, y_position - 5, x_offset)        
-            elif normalized_note == 'C4':
+            elif 'C4' in normalized_note or "C#4" in normalized_note or "C♭4" in normalized_note:
                 draw_ledger_lines(canvas, y_position, x_offset)
-            elif normalized_note == 'C6' or normalized_note == "C#6":
+            elif 'C6' in normalized_note or "C#6" in normalized_note or "C♭6" in normalized_note:
                     draw_ledger_lines(canvas, y_position, x_offset)
                     draw_ledger_lines(canvas, y_position + 10, x_offset)
-            elif normalized_note == 'D6':
+            elif 'D6' in normalized_note or "D#6" in normalized_note or "D♭6" in normalized_note:
                     draw_ledger_lines(canvas, y_position + 5, x_offset)
                     draw_ledger_lines(canvas, y_position + 15, x_offset)
-            elif normalized_note == 'E6':
+            elif 'E6' in normalized_note or "E#6" in normalized_note or "E♭6" in normalized_note:
                     draw_ledger_lines(canvas, y_position, x_offset)  # Line through the note
                     draw_ledger_lines(canvas, y_position + 10, x_offset)  # First line below
                     draw_ledger_lines(canvas, y_position + 20, x_offset)  # Second line below
-            elif normalized_note == 'F3':
+            elif 'F3' in normalized_note or "F#3" in normalized_note or "F♭3" in normalized_note:
                     draw_ledger_lines(canvas, y_position, x_offset)
                     draw_ledger_lines(canvas, y_position - 10, x_offset)
                     draw_ledger_lines(canvas, y_position - 20, x_offset)
-            elif normalized_note == 'G3':
+            elif 'G3' in normalized_note or "G#3" in normalized_note or "G♭3" in normalized_note:
                     draw_ledger_lines(canvas, y_position - 5, x_offset)
                     draw_ledger_lines(canvas, y_position - 15, x_offset)
 
