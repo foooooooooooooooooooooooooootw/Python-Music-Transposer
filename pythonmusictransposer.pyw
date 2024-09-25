@@ -17,49 +17,48 @@ instrument_transpose_map = {
 }
 
 def normalize_input(note):
-    """Normalize both scientific and caret notation correctly."""
+    """Normalize both scientific and caret notation correctly based on the input format."""
+    
+    # Check for both caret and scientific notation in the input
+    has_number = any(char.isdigit() for char in note)
+    has_caret = '^' in note or 'v' in note
 
-    # If caret notation is present, handle it first
-    caret_match = re.match(r'([A-G][#b♭]*)([v^]*)', note)
-    if caret_match:
+    # Disallow input with both number and caret notation
+    if has_number and has_caret:
+        raise ValueError("Invalid input: cannot have both number and caret notation.")
 
-        base_note = caret_match.group(1)  # e.g., A, B#, C♭
-        octave_modifiers = caret_match.group(2)  # e.g., ^^ or vv
+    # If scientific notation (contains a number), handle it
+    if has_number:
+        scientific_match = re.match(r'([A-G][#b♭]?)(\d+)', note)
+        if scientific_match:
+            base_note = scientific_match.group(1)  # Base note (e.g., 'B', 'G#', 'G♭')
+            octave = scientific_match.group(2)      # Octave (e.g., '5')
 
-        if 'b' in base_note:
-            base_note = base_note.replace('b', '♭')  # Normalize flats
+            # Normalize flats
+            if 'b' in base_note:
+                base_note = base_note.replace('b', '♭')  
 
-        # Debugging output to check parsed values
-        print(f"Debug: Parsed Note - Base: {base_note}, Modifiers: {octave_modifiers}")
+            return f"{base_note}{octave}"  # Return in the format BaseNoteOctave (e.g., G♭4)
 
-        # Determine the octave based on base note and caret modifiers
-        octave = 4 if base_note[:-1] in ['A', 'B', 'G', 'F'] else 5
-        print(base_note[:-1])
-        
-        # Adjust the octave based on caret modifiers
-        octave += octave_modifiers.count('^') - octave_modifiers.count('v')
+    # If caret notation (no number), handle it
+    if not has_number:
+        caret_match = re.match(r'([A-G][#b♭]*)([v^]*)', note)
+        if caret_match:
+            base_note = caret_match.group(1)  # e.g., A, B#, C♭
+            octave_modifiers = caret_match.group(2)  # e.g., ^^ or vv
 
-        return f"{base_note}{octave}"
+            if 'b' in base_note:
+                base_note = base_note.replace('b', '♭')  # Normalize flats
 
-    # Check for scientific notation (e.g., B5, C#5, G♭)
-    scientific_match = re.match(r'([A-G][#b♭]?)(\d*)', note)
-    if scientific_match:
-        base_note = scientific_match.group(1)  # Base note (e.g., 'B', 'G#', 'G♭')
-        octave = scientific_match.group(2)      # Octave (e.g., '5', empty if not present)
+            # Default to octave 5 for notes A, B, G, F; octave 4 for C, D, E
+            octave = 4 if base_note[0] in ['A', 'B', 'G', 'F'] else 5
+            
+            # Adjust the octave based on caret modifiers
+            octave += octave_modifiers.count('^') - octave_modifiers.count('v')
 
-        # If there's no octave, assume octave 4
-        if octave == '':
-            octave = '4'
-
-        # Handle flats and sharps correctly
-        if 'b' in base_note:
-            base_note = base_note.replace('b', '♭')  # Normalize flats
-
-        return f"{base_note}{octave}"  # Return in the format BaseNoteOctave (e.g., G♭4)
+            return f"{base_note}{octave}"
 
     return note  # Return as is if no match
-
-
 
 def parse_input(input_str):
     """Parse input for both caret and scientific notation."""
@@ -443,6 +442,11 @@ def place_notes(canvas, notes, staff_spacing, staff_y_offset):
                 canvas.create_text(x_offset - 5, y_position - 3, text='♭', font=('Arial', 14), fill='black')
             elif '♯' in normalized_note or '#' in normalized_note:  # Handle sharps
                 canvas.create_text(x_offset - 5, y_position - 3, text='♯', font=('Arial', 14), fill='black')
+
+            # Debugging output for note and octave
+            base_note = normalized_note[:-1]  # Base note (e.g., 'B')
+            octave = int(normalized_note[-1])  # Octave (e.g., '5')
+            print(f"Rendering Note: {base_note}, Octave: {octave}")
             
             if normalized_note == "A5":
                     draw_ledger_lines(canvas, y_position, x_offset)  # Line through the note
